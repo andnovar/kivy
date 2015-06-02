@@ -6,8 +6,6 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.graphics import Color, Rectangle
 
 from functools import partial
-
-
   
 class InkCanvasFloat(InkCanvasBehavior, FloatLayout):
     def __init__(self, **kwargs):
@@ -33,7 +31,6 @@ class InkCanvasTest(App):
         with inkc.canvas.before:
             Color(1,1,1,1)
             self.rect = Rectangle(size = inkc.size, pos = inkc.pos)
-        
         return inkc
     
     def _update_rect(self, instance, value):

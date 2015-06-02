@@ -43,41 +43,33 @@ class InkCanvasBehavior(object):
             touch.grab(self)
             ud = touch.ud
             ud['group'] = g = str(touch.uid)
+            pt = Point(touch.x, touch.y)
             if self.mode == self.Mode.draw:
-                stroke = Stroke(group_id=g)
-                stroke.color = Stroke.Color.Black
-                stroke.isHighlighter(0.5)
-                stroke.points.append(Point(touch.x, touch.y))
-                touch.ud['stroke'] = stroke
+                strk = Stroke(group_id=g)
+                strk.isHighlighter(0.5)
+                strk.points.append(pt)
+                touch.ud['stroke'] = strk
                 '''Calculate point size according to pressure'''
                 #if 'pressure' in touch.profile:
                 with self.canvas:
-                    Color(*stroke.color)
-                    touch.ud['line'] = Line(points = (touch.x, touch.y), width = 2.0, group=g)
+                    Color(*strk.color)
+                    touch.ud['line'] = Line(points = (pt.X, pt.Y), width = 2.0, group=g)
             elif self.mode == self.Mode.erase:
-                for stroke in self.strokes:
-                    tf = stroke.hit_test(Point(touch.x, touch.y))
-                    print tf
-                    if tf:
-                        print stroke.group_id
-                        self.canvas.remove_group(stroke.group_id)
+                self.remove_stroke(pt)
     
     def on_touch_move(self, touch):
         '''If pressure changed recalculate the point size'''
         if super(InkCanvasBehavior, self).on_touch_move(touch):
             return True
         if touch.grab_current is self:
+            pt = Point(touch.x, touch.y)
             if self.mode == self.Mode.draw:
-                touch.ud['stroke'].points.append(Point(touch.x,touch.y))
-                touch.ud['line'].points += [touch.x, touch.y]
+                touch.ud['stroke'].points.append(pt)
+                touch.ud['line'].points += [pt.X, pt.Y]
             elif self.mode == self.Mode.erase:
-                for stroke in self.strokes:
-                    if stroke.hit_test(Point(touch.x, touch.y)):
-                        print stroke.group_id
-                        self.canvas.remove_group(stroke.group_id)
+                self.remove_stroke(pt) 
 
     def on_touch_up(self, touch):
-        #Bug the touch up is raised even out of the bounds of inkcanvas.
         if touch.grab_current is self:
             if self.mode == self.Mode.draw:
                 self.strokes.append(touch.ud['stroke'])
@@ -87,9 +79,12 @@ class InkCanvasBehavior(object):
             #Fire event when created a new Stroke
         else:
             return super(InkCanvasBehavior, self).on_touch_up(touch)
+        
 
-    def remove_stroke(self):
-        pass
+    def remove_stroke(self, pt):
+        for stroke in self.strokes:
+            if stroke.hit_test(pt):
+                self.canvas.remove_group(stroke.group_id)
     
     @unique
     class Mode(Enum):

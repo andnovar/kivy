@@ -13,8 +13,6 @@ class Stroke:
     an InkCanvas, handles some drawing attributes and methods
     to perform changes on the points::
     
-        from kivy.gesture import Gesture, GestureDatabase
-    
         # Create a Stroke and modify attributes
         stroke = Stroke(group_id=g)
         stroke.color = Stroke.Color.Yellow
@@ -30,8 +28,8 @@ class Stroke:
     '''
     
     '''Default Constructor'''
-    def __init__(self, list_points=[], group_id=""):
-        self.points = list_points
+    def __init__(self, group_id=""):
+        self.points = []
         self.color = self.Color.Black
         self.point_size = 1
         self.group_id = group_id

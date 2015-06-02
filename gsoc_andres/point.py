@@ -61,3 +61,11 @@ class Point:
     def distance_to(self, p):
         '''Calculate euclidean distance between two points.'''
         return sqrt(pow(self.X - p.X, 2.0) + pow(self.Y - p.Y, 2.0))
+    
+    def to_int(self):
+        '''Make the point coordinates integers'''
+        return Point(int(self.X), int(self.Y))
+
+    def to_float(self):
+        '''Make the point coordinates float'''
+        return Point(float(self.X), float(self.Y))

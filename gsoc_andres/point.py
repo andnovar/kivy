@@ -1,6 +1,6 @@
 from math import sqrt
 
-class Point:
+class Point(object):
     
     '''
     Point

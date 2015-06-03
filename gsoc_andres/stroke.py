@@ -4,7 +4,8 @@ from kivy.properties import (NumericProperty, ListProperty, BooleanProperty,
 
 from kivy.graphics import Color
 from enum import Enum, unique
-
+from stroke_rect import StrokeRect
+from point import Point
 
 class Stroke(object):
 
@@ -70,6 +71,22 @@ class Stroke(object):
             if dist < 5.0:
                 return True
         return False
+    
+    def GetBounds(self):
+        minx = float("inf")
+        maxx = float(0)
+        miny = float("inf")
+        maxy = float(0)
+        for point in self.points:
+            if point.X < minx:
+                minx = point.X
+            if point.X > maxx:
+                maxx = point.X
+            if point.Y < miny:
+                miny = point.Y
+            if point.Y > maxy:
+                maxy = point.Y
+        return StrokeRect(Point(minx,maxy), Point(maxx,miny))
 
     class Color(object):
         '''Values for different colors so a Stroke can

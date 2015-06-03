@@ -1,6 +1,6 @@
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.label import Label
-from kivy.properties import (NumericProperty, ListProperty, BooleanProperty, DictProperty)
+from kivy.properties import ObjectProperty, ListProperty
 from random import random
 from kivy.graphics import Color, Rectangle, Point, GraphicException, Ellipse, Line, SmoothLine
 
@@ -13,8 +13,9 @@ from enum import Enum, unique
 
 from stroke import Stroke
 from point import Point
+from kivy.event import EventDispatcher
 
-class InkCanvasBehavior(object):
+class InkCanvasBehavior(EventDispatcher):
     
     '''InkCanvas behavior.
     
@@ -30,10 +31,21 @@ class InkCanvasBehavior(object):
     
     '''
     
+    @unique
+    class Mode(Enum):
+        '''Diferent Modes for the InkCanvas, Allows for drawing, erase and touch.        
+        '''
+        draw = 1
+        erase = 2
+        touch = 3
+    
+    strokes = ListProperty([])
+    mode = ObjectProperty(Mode.draw)
+    
     def __init__(self, **kwargs):
+        self.register_event_type('on_stroke_added')
+        self.register_event_type('on_stroke_removed')
         super(InkCanvasBehavior, self).__init__(**kwargs)
-        self.mode = self.Mode.draw
-        self.strokes = []
     
     def on_touch_down(self, touch):
         #capture touch and add group_id to stroke to associate it
@@ -72,24 +84,28 @@ class InkCanvasBehavior(object):
     def on_touch_up(self, touch):
         if touch.grab_current is self:
             if self.mode == self.Mode.draw:
-                self.strokes.append(touch.ud['stroke'])
+                self.add_stroke(touch.ud['stroke'])
             elif self.mode == self.Mode.erase:
                 pass
             touch.ungrab(self)
             #Fire event when created a new Stroke
         else:
             return super(InkCanvasBehavior, self).on_touch_up(touch)
-        
+
+    def add_stroke(self, strk):
+        self.strokes.append(strk)
+        self.dispatch('on_stroke_added', strk)
 
     def remove_stroke(self, pt):
-        for stroke in self.strokes:
-            if stroke.hit_test(pt):
-                self.canvas.remove_group(stroke.group_id)
-    
-    @unique
-    class Mode(Enum):
-        '''Diferent Modes for the InkCanvas, Allows for drawing, erase and touch.        
-        '''
-        draw = 1
-        erase = 2
-        touch = 3
+        for strk in self.strokes:
+            if strk.hit_test(pt):
+                self.canvas.remove_group(strk.group_id)
+                self.dispatch('on_stroke_removed', strk)
+                if strk in self.strokes:
+                    self.strokes.remove(strk)
+
+    def on_stroke_added(self, strk):
+        pass
+
+    def on_stroke_removed(self, strk):
+        pass

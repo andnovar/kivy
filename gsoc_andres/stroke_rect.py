@@ -1,4 +1,4 @@
-from point import Point
+from stroke_point import StrokePoint
 
 
 class StrokeRect(object):
@@ -26,7 +26,7 @@ class StrokeRect(object):
         self.height = self.top - self.bottom
 
     def contains(self, p):
-        ''' Returns whether or not a point is inside the rectangle '''
+        ''' Returns whether or not a stroke_point is inside the rectangle '''
         return (self.left <= p.X <= self.right and
                 self.top <= p.Y <= self.bottom)
 
@@ -36,12 +36,12 @@ class StrokeRect(object):
                 self.top < rect.bottom and self.bottom > rect.top)
 
     def top_left(self):
-        '''Get the top-left corner point'''
-        return Point(self.left, self.top)
+        '''Get the top-left corner stroke_point'''
+        return StrokePoint(self.left, self.top)
 
     def bottom_right(self):
-        '''Get the bottom right corner point'''
-        return Point(self.right, self.bottom)
+        '''Get the bottom right corner stroke_point'''
+        return StrokePoint(self.right, self.bottom)
 
     def __str__(self):
         return "<Rect (%s,%s) - (%s,%s)>" % (self.left, self.top,
@@ -49,5 +49,5 @@ class StrokeRect(object):
 
     def __repr__(self):
         return "%s(%r, %r)" % (self.__class__.__name__,
-                               Point(self.left, self.top),
-                               Point(self.right, self.bottom))
+                               StrokePoint(self.left, self.top),
+                               StrokePoint(self.right, self.bottom))

@@ -5,7 +5,8 @@ from kivy.properties import (NumericProperty, ListProperty, BooleanProperty,
 from kivy.graphics import Color
 from enum import Enum, unique
 from stroke_rect import StrokeRect
-from point import Point
+from stroke_point import StrokePoint
+from math import sqrt
 
 class Stroke(object):
 
@@ -21,7 +22,7 @@ class Stroke(object):
         stroke = Stroke(group_id=g)
         stroke.color = Stroke.Color.Yellow
         stroke.isHighlighter(0.5)
-        stroke.points.append(Point(touch.x, touch.y))
+        stroke.points.append(StrokePoint(touch.x, touch.y))
 
     .. warning::
 
@@ -37,6 +38,8 @@ class Stroke(object):
         self.color = self.Color.Black
         self.point_size = 1
         self.group_id = group_id
+        self.graphics_points = []
+        self.sampled_points = []
 
     def __eq__(self, other):
         '''Override default Equals behaviour'''
@@ -56,13 +59,13 @@ class Stroke(object):
         return cad[:-1] + "]"
 
     def __repr__(self):
-        '''print Point'''
+        '''print StrokePoint'''
         cad = "<%s> [" % (self.__class__.__name__)
         for point in self.points:
             cad += "(%r, %r)," % (point.X, point.Y)
         return cad[:-1] + "]"
 
-    def isHighlighter(self, alfa):
+    def is_highlighter(self, alfa):
         self.color = self.color + (alfa,)
 
     def hit_test(self, p):
@@ -72,7 +75,7 @@ class Stroke(object):
                 return True
         return False
     
-    def GetBounds(self):
+    def get_bounds(self):
         minx = float("inf")
         maxx = float(0)
         miny = float("inf")
@@ -86,8 +89,51 @@ class Stroke(object):
                 miny = point.Y
             if point.Y > maxy:
                 maxy = point.Y
-        return StrokeRect(Point(minx,maxy), Point(maxx,miny))
+        return StrokeRect(StrokePoint(minx,maxy), StrokePoint(maxx,miny))
 
+    def sampling1(self):
+        for i in range(1, len(self.points) - 1):
+            list_new_points = self.calculate2points(self.points[i-1], self.points[i])
+            self.graphics_points.extend(list_new_points)
+            self.sampled_points.extend(list_new_points)
+
+    def sampling2(self):
+        bounds = self.get_bounds()
+        S = bounds.top_left().distance_to(bounds.bottom_right()) / 40.0;
+        D = 0.0
+        self.sampled_points.append(self.points[0])
+        for i in range(1, len(self.points) - 1):
+            d = self.points[i-1].distance_to(self.points[i]) # euclidean distance
+            if (D+d) >= S:
+                q = StrokePoint(-1,-1)
+                q.X = self.points[i-1].X + ((S - D) / d) * (self.points[i].X - self.points[i-1].X)
+                q.Y = self.points[i-1].Y + ((S - D) / d) * (self.points[i].Y - self.points[i-1].Y)
+                self.sampled_points.append(q)
+                D = 0.0
+            else:
+                D = D + d
+
+    def calculate2points(self, point1, point2, steps=5):
+        dx = point2.X - point1.X
+        dy = point2.Y - point1.Y
+        dist = sqrt(dx * dx + dy * dy)
+        if dist < steps:
+            return None
+        o = []
+        m = dist / steps
+        for i in range(1, int(m)):
+            mi = i / m
+            lastx = point1.X + dx * mi
+            lasty = point1.Y + dy * mi
+            o.extend([lastx, lasty])
+        return o
+
+    def get_line_points(self):
+        linepoints = []
+        for point in self.sampled_points:
+            linepoints.extend([float(point.X), float(point.Y)])
+        return linepoints
+    
     class Color(object):
         '''Values for different colors so a Stroke can
         change its color by name, rather than a tuple

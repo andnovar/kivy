@@ -1,5 +1,5 @@
 from kivy.app import App
-from inkcanvas import InkCanvasBehavior
+from stroke_canvas import StrokeCanvasBehavior
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.boxlayout import BoxLayout
@@ -9,7 +9,7 @@ from stroke import Stroke
 from functools import partial
 from stroke_rect import StrokeRect
   
-class InkCanvasFloat(InkCanvasBehavior, FloatLayout):
+class InkCanvasFloat(StrokeCanvasBehavior, FloatLayout):
     def __init__(self, **kwargs):
         super(InkCanvasFloat, self).__init__(**kwargs)
   
@@ -17,17 +17,17 @@ class InkCanvasTest(App):
     title = 'InkCanvas'
 
     def callback(self, button, result, *args):
-        if self.inkc.mode == InkCanvasBehavior.Mode.draw:
-            self.inkc.mode = InkCanvasBehavior.Mode.erase
+        if self.inkc.mode == StrokeCanvasBehavior.Mode.draw:
+            self.inkc.mode = StrokeCanvasBehavior.Mode.erase
             button.text = 'Erase Mode'
-        elif self.inkc.mode == InkCanvasBehavior.Mode.erase:
-            self.inkc.mode = InkCanvasBehavior.Mode.draw
+        elif self.inkc.mode == StrokeCanvasBehavior.Mode.erase:
+            self.inkc.mode = StrokeCanvasBehavior.Mode.draw
             button.text = 'Draw Mode'
 
-    def stroke_collected(self, layout, strk):
-        print "Stroke collected called", strk
+    def stroke_collected(self, layout, stroke):
+        print "Stroke collected called", stroke
         # Just to visualize the bounding box
-        rect = strk.GetBounds()
+        rect = stroke.get_bounds()
         with self.inkc.canvas:
             Rectangle(pos = (rect.left, rect.bottom), size = (rect.right-rect.left, rect.top - rect.bottom))
 

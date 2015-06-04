@@ -33,12 +33,10 @@ class Stroke(object):
     '''
 
     '''Default Constructor'''
-    def __init__(self, group_id=""):
+    def __init__(self, group_id="", shortstraw_const=40.0):
         self.points = []
         self.color = self.Color.Black
-        self.point_size = 1
         self.group_id = group_id
-        self.graphics_points = []
         self.sampled_points = []
 
     def __eq__(self, other):
@@ -66,7 +64,19 @@ class Stroke(object):
         return cad[:-1] + "]"
 
     def is_highlighter(self, alfa):
+        if(len(self.color) == 4):
+            self.color = (self.color[0], self.color[1], self.color[2])
         self.color = self.color + (alfa,)
+
+    def visibility(self, visible):
+        alfa = 1
+        if len(self.color) == 4:
+            alfa = self.color[3]
+            self.color = (self.color[0], self.color[1], self.color[2])
+        if not visible:
+            self.color = self.color + (0,)
+        else:
+            self.color = self.color + (alfa,)
 
     def hit_test(self, p):
         for point in self.points:
@@ -91,44 +101,26 @@ class Stroke(object):
                 maxy = point.Y
         return StrokeRect(StrokePoint(minx,maxy), StrokePoint(maxx,miny))
 
-    def sampling1(self):
-        for i in range(1, len(self.points) - 1):
-            list_new_points = self.calculate2points(self.points[i-1], self.points[i])
-            self.graphics_points.extend(list_new_points)
-            self.sampled_points.extend(list_new_points)
-
-    def sampling2(self):
+    def sample_points(self):
         bounds = self.get_bounds()
         S = bounds.top_left().distance_to(bounds.bottom_right()) / 40.0;
         D = 0.0
         self.sampled_points.append(self.points[0])
-        for i in range(1, len(self.points) - 1):
-            d = self.points[i-1].distance_to(self.points[i]) # euclidean distance
-            if (D+d) >= S:
-                q = StrokePoint(-1,-1)
-                q.X = self.points[i-1].X + ((S - D) / d) * (self.points[i].X - self.points[i-1].X)
-                q.Y = self.points[i-1].Y + ((S - D) / d) * (self.points[i].Y - self.points[i-1].Y)
-                self.sampled_points.append(q)
-                D = 0.0
-            else:
-                D = D + d
+        clone_points = self.points[:]
+        for i, point in enumerate(clone_points):
+            if i > 0:
+                d = clone_points[i-1].distance_to(clone_points[i]) # euclidean distance
+                if (D+d) >= S:
+                    q = StrokePoint(-1,-1)
+                    q.X = clone_points[i-1].X + ((S - D) / d) * (clone_points[i].X - clone_points[i-1].X)
+                    q.Y = clone_points[i-1].Y + ((S - D) / d) * (clone_points[i].Y - clone_points[i-1].Y)
+                    self.sampled_points.append(q)
+                    clone_points.insert(i, q)
+                    D = 0.0
+                else:
+                    D = D + d
 
-    def calculate2points(self, point1, point2, steps=5):
-        dx = point2.X - point1.X
-        dy = point2.Y - point1.Y
-        dist = sqrt(dx * dx + dy * dy)
-        if dist < steps:
-            return None
-        o = []
-        m = dist / steps
-        for i in range(1, int(m)):
-            mi = i / m
-            lastx = point1.X + dx * mi
-            lasty = point1.Y + dy * mi
-            o.extend([lastx, lasty])
-        return o
-
-    def get_line_points(self):
+    def get_graphics_line_points(self):
         linepoints = []
         for point in self.sampled_points:
             linepoints.extend([float(point.X), float(point.Y)])
@@ -144,9 +136,17 @@ class Stroke(object):
         Azure = (0.941176, 1, 1)
         Beige = (0.960784, 0.960784, 0.862745)
         Black = (0, 0, 0)
+        BlanchedAlmond = (1, 0.921569, 0.803922)
         Blue = (0, 0, 1)
         BlueViolet = (0.541176, 0.168627, 0.886275)
         Brown = (0.647059, 0.164706, 0.164706)
+        BurlyWood = (0.870588, 0.721569, 0.529412)
+        CadetBlue = (0.372549, 0.619608, 0.627451)
+        ChartReuse = (0.498039, 1, 0)
+        Chocolate = (0.823529, 0.411765, 0.117647)
+        Coral = (1, 0.498039, 0.313725)
+        CornFlowerBlue = (0.392157, 0.584314, 0.929412)
+        CornSilk = (1, 0.972549, 0.862745)
         Cyan = (0, 1, 1)
         DarkBlue = (0, 0, 0.545098)
         DarkCyan = (0, 0.545098, 0.545098)

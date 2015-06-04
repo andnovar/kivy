@@ -1,5 +1,5 @@
 from kivy.app import App
-from stroke_canvas import StrokeCanvasBehavior
+from stroke_canvas import StrokeCanvasBehavior, CanvasMode
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.boxlayout import BoxLayout
@@ -17,11 +17,11 @@ class InkCanvasTest(App):
     title = 'InkCanvas'
 
     def callback(self, button, result, *args):
-        if self.inkc.mode == StrokeCanvasBehavior.Mode.draw:
-            self.inkc.mode = StrokeCanvasBehavior.Mode.erase
+        if self.inkc.mode == CanvasMode.draw:
+            self.inkc.mode = CanvasMode.erase
             button.text = 'Erase Mode'
-        elif self.inkc.mode == StrokeCanvasBehavior.Mode.erase:
-            self.inkc.mode = StrokeCanvasBehavior.Mode.draw
+        elif self.inkc.mode == CanvasMode.erase:
+            self.inkc.mode = CanvasMode.draw
             button.text = 'Draw Mode'
 
     def stroke_collected(self, layout, stroke):
@@ -29,6 +29,7 @@ class InkCanvasTest(App):
         # Just to visualize the bounding box
         rect = stroke.get_bounds()
         with self.inkc.canvas:
+            Color(*stroke.Color.Yellow + (0.5,))
             Rectangle(pos = (rect.left, rect.bottom), size = (rect.right-rect.left, rect.top - rect.bottom))
 
     def stroke_removed(self, layout, strk):

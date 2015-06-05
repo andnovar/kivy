@@ -1,24 +1,25 @@
 from kivy.app import App
-from kivy.uix.inkcanvas import StrokeCanvasBehavior, CanvasMode, Stroke, StrokeRect
+from kivy.uix.inkcanvas import StrokeCanvasBehavior, Stroke, StrokeRect, StrokePoint
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.boxlayout import BoxLayout
 from kivy.graphics import Color, Rectangle
 from functools import partial
+
   
 class StrokeCanvasFloat(StrokeCanvasBehavior, FloatLayout):
-    def __init__(self, **kwargs):
-        super(StrokeCanvasFloat, self).__init__(**kwargs)
-  
+    pass
+
+
 class StrokeCanvasTest(App):
     title = 'InkCanvas'
 
     def callback(self, button, result, *args):
-        if self.inkc.mode == CanvasMode.draw:
-            self.inkc.mode = CanvasMode.erase
+        if self.inkc.mode == 'draw':
+            self.inkc.mode = 'erase'
             button.text = 'Erase Mode'
-        elif self.inkc.mode == CanvasMode.erase:
-            self.inkc.mode = CanvasMode.draw
+        elif self.inkc.mode == 'erase':
+            self.inkc.mode = 'draw'
             button.text = 'Draw Mode'
 
     def stroke_collected(self, layout, stroke):

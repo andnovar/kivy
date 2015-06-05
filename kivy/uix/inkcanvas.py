@@ -1,10 +1,9 @@
-from kivy.properties import ObjectProperty, ListProperty
+from kivy.properties import OptionProperty, ListProperty
 from kivy.graphics import Color, Line, SmoothLine
 from math import sqrt
 
 
 class StrokePoint(object):
-
     '''
     Point
     ===================
@@ -15,10 +14,8 @@ class StrokePoint(object):
         pointA = Point(2,3)
         pointB = Point(4,5)
         distance = pointA.distance_to(pointB)
-
     '''
 
-    '''Default Constructor'''
     def __init__(self, x, y):
         self.x = x
         self.y = y
@@ -26,7 +23,7 @@ class StrokePoint(object):
     def __eq__(self, other):
         '''Override default Equals behaviour'''
         if isinstance(other, self.__class__):
-            return self.__dict__ == other.__dict__
+            return (self.x == other.x and self.y == other.y)
         return False
 
     def __ne__(self, other):
@@ -85,10 +82,15 @@ class StrokeRect(object):
         pointA = Point(2,3)
         pointB = Point(4,5)
         rect = StrokeRect(pointA, pointB)
+
+    :Parameters:
+        `p1`: StrokePoint
+            Top left point of the rect.
+        `p2`: StrokePoint
+            Bottom right point of the rect.
     '''
 
     def __init__(self, p1, p2):
-        ''' Initialize a Rectangle by using two points'''
         self.pt1 = p1.to_float()
         self.pt2 = p2.to_float()
         self.left = min(self.pt1.x, self.pt2.x)
@@ -127,20 +129,19 @@ class StrokeRect(object):
 
 
 class Stroke(object):
-
     '''
     Stroke
     ===================
 
     This class allows you to easily manipulate points on
-    an InkCanvas, handles some drawing attributes and methods
-    to perform changes on the points::
+    an InkCanvas, handles some basic drawing attributes and
+    methods to filter and sample the original points list::
 
         # Create a Stroke and modify attributes
         stroke = Stroke(group_id=g)
         stroke.color = Stroke.Color.Yellow
         stroke.isHighlighter(0.5)
-        stroke.points.append(StrokePoint(touch.x, touch.y))
+        stroke.points.append(StrokePoint(8.0, 9.0))
 
     .. warning::
 
@@ -150,12 +151,12 @@ class Stroke(object):
 
     '''
 
-    '''Default Constructor'''
     def __init__(self, group_id="", shortstraw_const=40.0):
         self.points = []
         self.color = self.Color.Black
         self.group_id = group_id
         self.sampled_points = []
+        self.shortstraw_const = shortstraw_const
 
     def __eq__(self, other):
         '''Override default Equals behaviour'''
@@ -182,11 +183,13 @@ class Stroke(object):
         return cad[:-1] + "]"
 
     def is_highlighter(self, alfa):
+        '''Change the alpha value in Color, for transparency'''
         if(len(self.color) == 4):
             self.color = (self.color[0], self.color[1], self.color[2])
         self.color = self.color + (alfa,)
 
     def visibility(self, visible):
+        '''Defines whether or not a stroke is visible'''
         alfa = 1
         if len(self.color) == 4:
             alfa = self.color[3]
@@ -197,6 +200,7 @@ class Stroke(object):
             self.color = self.color + (alfa,)
 
     def hit_test(self, p):
+        '''Allows to know if a point is close to any of the strokes on canvas'''
         for point in self.points:
             dist = point.distance_to(p)
             if dist < 5.0:
@@ -204,6 +208,13 @@ class Stroke(object):
         return False
 
     def get_bounds(self):
+        '''Returns a StrokeRect which is a logical rectangle with
+        the bounds of a stroke expressed as top, left, bottom, right
+        values.
+        :Returns:
+            Stroke bounds as a StrokeRect. It is a
+            :class:`~kivy.uix.inkcanvas.StrokeRect`
+        '''
         minx = float("inf")
         maxx = float(0)
         miny = float("inf")
@@ -220,6 +231,17 @@ class Stroke(object):
         return StrokeRect(StrokePoint(minx, maxy), StrokePoint(maxx, miny))
 
     def filtering(self):
+        '''Returns a copy of the points list with points that are not in
+        a 2.0 radius from the original point. Distance is calculate by
+        euclidean distance.
+        ::
+            >>> filtered_points = self.filtering()
+            >>> self.points
+            (22,10), (22,11), (25,15), (26,15), (30,11)
+            >>> filtered_points
+            (22, 10), (25,15), (30,11)
+        .. versionadded:: 1.9.0
+        '''
         clone_points = self.points[:]
         for i, point in enumerate(clone_points):
             if i > 0:
@@ -229,8 +251,21 @@ class Stroke(object):
         return clone_points
 
     def sample_points(self):
+        '''Stores a copy of the points list in self.sampled_points that
+        were processed and their positions recalculated to be at the same
+        euclidean distance.
+        ::
+            >>> self.sample_points()
+            >>> self.points
+            PointA, PointB, PointC, PointD, PointE
+            >>> self.sampled_points
+            PointA.distance_to(PointB) = PointB.distance_to(PointC) =
+                    PointC.distance_to(PointD)
+        .. versionadded:: 1.9.0
+        '''
         bounds = self.get_bounds()
-        S = bounds.top_left().distance_to(bounds.bottom_right()) / 40.0
+        S = bounds.top_left().distance_to(bounds.bottom_right()) / \
+                             self.shortstraw_const
         D = 0.0
         self.sampled_points.append(self.points[0])
         clone_points = self.points[:]
@@ -250,6 +285,7 @@ class Stroke(object):
                     D = D + d
 
     def get_graphics_line_points(self):
+        '''Points in vertex instructions format for rendering'''
         linepoints = []
         for point in self.sampled_points:
             linepoints.extend([float(point.x), float(point.y)])
@@ -289,16 +325,8 @@ class Stroke(object):
         White = (1, 1, 1)
 
 
-class CanvasMode(object):
-    '''Diferent Modes for the InkCanvas, Allows for drawing, erase and touch.
-    '''
-    draw = 1
-    erase = 2
-    touch = 3
-
-
 class StrokeCanvasBehavior(object):
-    '''InkCanvas behavior.
+    '''StrokeCanvas behavior.
 
     :Events:
         `on_stroke_added`
@@ -311,11 +339,10 @@ class StrokeCanvasBehavior(object):
     '''
 
     strokes = ListProperty([])
-    mode = ObjectProperty(CanvasMode.draw)
+    mode = OptionProperty("draw", options=["draw", "erase", "touch"])
+    __events__ = ('on_stroke_added', 'on_stroke_removed')
 
     def __init__(self, **kwargs):
-        self.register_event_type('on_stroke_added')
-        self.register_event_type('on_stroke_removed')
         super(StrokeCanvasBehavior, self).__init__(**kwargs)
 
     def on_touch_down(self, touch):
@@ -327,7 +354,7 @@ class StrokeCanvasBehavior(object):
             ud = touch.ud
             ud['group'] = g = str(touch.uid)
             pt = StrokePoint(touch.x, touch.y)
-            if self.mode == CanvasMode.draw:
+            if self.mode == 'draw':
                 stroke = Stroke(group_id=g)
                 stroke.color = stroke.Color.DarkBlue
                 stroke.is_highlighter(0.5)
@@ -340,7 +367,7 @@ class StrokeCanvasBehavior(object):
                     Color(*stroke.color)
                     touch.ud['line'] = Line(points=(pt.x, pt.y),
                                             width=2.0, group=g)
-            elif self.mode == CanvasMode.erase:
+            elif self.mode == 'erase':
                 self.remove_stroke(pt)
 
     def on_touch_move(self, touch):
@@ -349,16 +376,16 @@ class StrokeCanvasBehavior(object):
             return True
         if touch.grab_current is self:
             pt = StrokePoint(touch.x, touch.y)
-            if self.mode == CanvasMode.draw:
+            if self.mode == 'draw':
                 touch.ud['stroke'].points.append(pt)
                 touch.ud['line'].points += [pt.x, pt.y]
-            elif self.mode == CanvasMode.erase:
+            elif self.mode == 'erase':
                 self.remove_stroke(pt)
 
     def on_touch_up(self, touch):
         if touch.grab_current is self:
             pt = StrokePoint(touch.x, touch.y)
-            if self.mode == CanvasMode.draw:
+            if self.mode == 'draw':
                 touch.ud['stroke'].points.append(pt)
                 self.add_stroke(touch.ud['stroke'])
                 touch.ud['stroke'].sample_points()
@@ -369,10 +396,9 @@ class StrokeCanvasBehavior(object):
                     Color(0, 0, 1)
                     Line(points=touch.ud['stroke'].get_graphics_line_points(),
                          width=1.0)
-            elif self.mode == CanvasMode.erase:
+            elif self.mode == 'erase':
                 pass
             touch.ungrab(self)
-            #Fire event when created a new Stroke
         else:
             return super(StrokeCanvasBehavior, self).on_touch_up(touch)
 

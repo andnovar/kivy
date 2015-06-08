@@ -1,6 +1,10 @@
-from kivy.properties import OptionProperty, ListProperty
+from kivy.properties import OptionProperty, ListProperty, StringProperty, \
+                    ObjectProperty, NumericProperty, BooleanProperty
 from kivy.graphics import Color, Line, SmoothLine
+from kivy.utils import color_dictionary, get_color_by_name
+from kivy.event import EventDispatcher
 from math import sqrt
+
 
 
 class StrokePoint(object):
@@ -73,7 +77,7 @@ class StrokePoint(object):
 
 class StrokeRect(object):
     '''
-    Rect
+    StrokeRect
     ===================
 
     A rectangle implementation for getting bounds of objects::
@@ -128,7 +132,7 @@ class StrokeRect(object):
                                StrokePoint(self.right, self.bottom))
 
 
-class Stroke(object):
+class Stroke(EventDispatcher):
     '''
     Stroke
     ===================
@@ -139,8 +143,8 @@ class Stroke(object):
 
         # Create a Stroke and modify attributes
         stroke = Stroke(group_id=g)
-        stroke.color = Stroke.Color.Yellow
-        stroke.isHighlighter(0.5)
+        stroke._color = get_color_by_name('yellow')
+        stroke.is_highlighter(0.5)
         stroke.points.append(StrokePoint(8.0, 9.0))
 
     .. warning::
@@ -151,9 +155,23 @@ class Stroke(object):
 
     '''
 
-    def __init__(self, group_id="", shortstraw_const=40.0):
-        self.points = []
-        self.color = self.Color.Black
+    points = ListProperty([])
+    '''List of points present on the Stroke.
+
+    :attr:`points` is a :class:`~kivy.properties.ListProperty` with no
+    elements initially.
+    '''
+
+    color = StringProperty('black')
+    '''Color attribute of the stroke.
+
+    :attr:`color` is a :class:`~kivy.properties.StringProperty` which by
+    default is black.
+    '''
+
+    def __init__(self, group_id="", shortstraw_const=40.0, **kwargs):
+        super(Stroke, self).__init__(**kwargs)
+        self._color = get_color_by_name(self.color)
         self.group_id = group_id
         self.sampled_points = []
         self.shortstraw_const = shortstraw_const
@@ -182,22 +200,26 @@ class Stroke(object):
             cad += "(%r, %r)," % (point.x, point.y)
         return cad[:-1] + "]"
 
+    def on_color(self, instance, color):
+        '''Sets the color when the property change its value'''
+        self._color = get_color_by_name(color)
+
     def is_highlighter(self, alfa):
         '''Change the alpha value in Color, for transparency'''
-        if(len(self.color) == 4):
-            self.color = (self.color[0], self.color[1], self.color[2])
-        self.color = self.color + (alfa,)
+        if(len(self._color) == 4):
+            self._color = (self._color[0], self._color[1], self._color[2])
+        self._color = self._color + (alfa,)
 
     def visibility(self, visible):
         '''Defines whether or not a stroke is visible'''
         alfa = 1
-        if len(self.color) == 4:
-            alfa = self.color[3]
-            self.color = (self.color[0], self.color[1], self.color[2])
+        if len(self._color) == 4:
+            alfa = self._color[3]
+            self._color = (self._color[0], self._color[1], self._color[2])
         if not visible:
-            self.color = self.color + (0,)
+            self._color = self._color + (0,)
         else:
-            self.color = self.color + (alfa,)
+            self._color = self._color + (alfa,)
 
     def hit_test(self, p):
         '''Allows to know if a point is close to any of the strokes on canvas'''
@@ -291,39 +313,6 @@ class Stroke(object):
             linepoints.extend([float(point.x), float(point.y)])
         return linepoints
 
-    class Color(object):
-        '''Values for different colors so a Stroke can
-        change its color by name, rather than a tuple
-        '''
-        AliceBlue = (0.941176, 0.972549, 1)
-        AntiqueWhite = (0.980392, 0.921569, 0.843137)
-        AquaMarine = (0.498039, 1, 0.831373)
-        Azure = (0.941176, 1, 1)
-        Beige = (0.960784, 0.960784, 0.862745)
-        Black = (0, 0, 0)
-        BlanchedAlmond = (1, 0.921569, 0.803922)
-        Blue = (0, 0, 1)
-        BlueViolet = (0.541176, 0.168627, 0.886275)
-        Brown = (0.647059, 0.164706, 0.164706)
-        BurlyWood = (0.870588, 0.721569, 0.529412)
-        CadetBlue = (0.372549, 0.619608, 0.627451)
-        ChartReuse = (0.498039, 1, 0)
-        Chocolate = (0.823529, 0.411765, 0.117647)
-        Coral = (1, 0.498039, 0.313725)
-        CornFlowerBlue = (0.392157, 0.584314, 0.929412)
-        CornSilk = (1, 0.972549, 0.862745)
-        Crimson = (0.862745, 0.0784314, 0.235294)
-        Cyan = (0, 1, 1)
-        DarkBlue = (0, 0, 0.545098)
-        DarkCyan = (0, 0.545098, 0.545098)
-        DarkGoldenRod = (0.721569, 0.52549, 0.0431373)
-        DarkGray = (0.662745, 0.662745, 0.662745)
-        Green = (0, 1, 0)
-        Grey = (0.745098, 0.745098, 0.745098)
-        Indigo = (0.294118, 0, 0.509804)
-        Yellow = (1, 1, 0)
-        White = (1, 1, 1)
-
 
 class StrokeCanvasBehavior(object):
     '''StrokeCanvas behavior.
@@ -339,14 +328,59 @@ class StrokeCanvasBehavior(object):
     '''
 
     strokes = ListProperty([])
+    '''List of strokes present on the StrokeCanvas.
+
+    :attr:`strokes` is a :class:`~kivy.properties.ListProperty` with no
+    elements initially.
+    '''
+    
     mode = OptionProperty("draw", options=["draw", "erase", "touch"])
+    '''Different modes available on the StrokeCanvas.
+
+    :attr:`mode` is a :class:`~kivy.properties.OptionProperty` with value
+    draw by default.
+    '''
+
+    stroke_color = StringProperty('black')
+    '''Color of the stroke rendered on the StrokeCanvas.
+
+    :attr:`stroke_color` is a :class:`~kivy.properties.StringProperty` with
+    value black by default.
+    '''
+
+    stroke_width = NumericProperty(1.0)
+    '''Width of the stroke rendered on the StrokeCanvas.
+
+    :attr:`stroke_width` is a :class:`~kivy.properties.NumericProperty` with
+    value 1.0 by default.
+    '''
+
+    stroke_visibility = BooleanProperty(True)
+    '''Defines whether a Stroke is visible or not.
+
+    :attr:`stroke_visibility` is a :class:`~kivy.properties.BooleanProperty`
+    with value True by default.
+    '''
+
+    stroke_opacity = NumericProperty(1.0)
+    '''Set the alpha value of the stroke rendered on the StrokeCanvas.
+
+    :attr:`stroke_opacity` is a :class:`~kivy.properties.NumericProperty` with
+    value 1.0 by default.
+    '''
+
     __events__ = ('on_stroke_added', 'on_stroke_removed')
 
     def __init__(self, **kwargs):
         super(StrokeCanvasBehavior, self).__init__(**kwargs)
 
     def on_touch_down(self, touch):
-        #capture touch and add group_id to stroke to associate it
+        '''Receive a touch down event and check the mode of the StrokeCanvas.
+        If the mode is draw initializes a Stroke object and starts to draw a
+        line with the point created from the touch.
+        if the mode is erase, it will check if it colides with any stroke
+        already present on the StrokeCanvas, if so it will delete the stroke.
+        '''
         if super(StrokeCanvasBehavior, self).on_touch_down(touch):
             return True
         if self.collide_point(*touch.pos):
@@ -356,22 +390,27 @@ class StrokeCanvasBehavior(object):
             pt = StrokePoint(touch.x, touch.y)
             if self.mode == 'draw':
                 stroke = Stroke(group_id=g)
-                stroke.color = stroke.Color.DarkBlue
-                stroke.is_highlighter(0.5)
-                stroke.visibility(True)
+                stroke.color = self.stroke_color
+                stroke.is_highlighter(self.stroke_opacity)
+                stroke.visibility(self.stroke_visibility)
                 stroke.points.append(pt)
                 touch.ud['stroke'] = stroke
                 '''Calculate stroke_point size according to pressure'''
                 #if 'pressure' in touch.profile:
                 with self.canvas:
-                    Color(*stroke.color)
+                    Color(*stroke._color)
                     touch.ud['line'] = Line(points=(pt.x, pt.y),
-                                            width=2.0, group=g)
+                                            width=self.stroke_width, group=g)
             elif self.mode == 'erase':
                 self.remove_stroke(pt)
 
     def on_touch_move(self, touch):
-        '''If pressure changed recalculate the stroke_point size'''
+        '''Receive a touch down event and check the mode of the StrokeCanvas.
+        If the mode is draw new touches will be created as Points and added to
+        the Stroke. A graphic line will de displayed on the StrokeCanvas.
+        if the mode is erase, it will check if it colides with any stroke 
+        already present on the StrokeCanvas, if so it will delete the stroke.
+        '''
         if super(StrokeCanvasBehavior, self).on_touch_move(touch):
             return True
         if touch.grab_current is self:
@@ -383,6 +422,11 @@ class StrokeCanvasBehavior(object):
                 self.remove_stroke(pt)
 
     def on_touch_up(self, touch):
+        '''Receive a touch down event and check the mode of the StrokeCanvas.
+        If the mode is draw the last touch will be added as a Point to the
+        Stroke and the Stroke added to the StrokeCanvas.
+        if the mode is erase, it will do nothing.
+        '''
         if touch.grab_current is self:
             pt = StrokePoint(touch.x, touch.y)
             if self.mode == 'draw':
@@ -390,10 +434,8 @@ class StrokeCanvasBehavior(object):
                 self.add_stroke(touch.ud['stroke'])
                 touch.ud['stroke'].sample_points()
                 points_list = touch.ud['stroke'].filtering()
-                print len(touch.ud['stroke'].points)
-                print len(points_list)
                 with self.canvas:
-                    Color(0, 0, 1)
+                    Color(1, 1, 0)
                     Line(points=touch.ud['stroke'].get_graphics_line_points(),
                          width=1.0)
             elif self.mode == 'erase':
@@ -403,10 +445,13 @@ class StrokeCanvasBehavior(object):
             return super(StrokeCanvasBehavior, self).on_touch_up(touch)
 
     def add_stroke(self, stroke):
+        '''Add a stroke to the list of strokes
+        '''
         self.strokes.append(stroke)
         self.dispatch('on_stroke_added', stroke)
 
     def remove_stroke(self, pt):
+        '''Remove a stroke from the list of strokes'''
         for stroke in self.strokes:
             if stroke.hit_test(pt):
                 self.canvas.remove_group(stroke.group_id)
@@ -415,7 +460,20 @@ class StrokeCanvasBehavior(object):
                     self.strokes.remove(stroke)
 
     def on_stroke_added(self, stroke):
+        '''Receive a stroke object that has been added to the StrokeCanvas.
+
+        :Parameters:
+            `stroke`: :class:`~kivy.uix.inkcanvas.Stroke` class
+                Stroke received. The stroke contains a list of points in <x,y>.
+        '''
         pass
 
     def on_stroke_removed(self, stroke):
+        '''Receive a stroke object that has been removed from the 
+        StrokeCanvas.
+
+        :Parameters:
+            `stroke`: :class:`~kivy.uix.inkcanvas.Stroke` class
+                Stroke received. The stroke contains a list of points in <x,y>.
+        '''
         pass

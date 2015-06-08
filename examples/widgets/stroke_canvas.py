@@ -1,3 +1,13 @@
+'''
+StrokeCanvas Demonstration
+=======================================
+
+This demonstrates the use of a StrokeCanvas, properties and behavior that can
+be changed. It binds as well events produced for the StrokeCanvas.
+Additionally, it shows the bounding box of a stroke with a fade rectangle.
+
+'''
+
 from kivy.app import App
 from kivy.uix.inkcanvas import StrokeCanvasBehavior, Stroke, StrokeRect, StrokePoint
 from kivy.uix.button import Button
@@ -23,26 +33,29 @@ class StrokeCanvasTest(App):
             button.text = 'Draw Mode'
 
     def stroke_collected(self, layout, stroke):
-        print "Stroke collected called", stroke
         # Just to visualize the bounding box
         rect = stroke.get_bounds()
         with self.inkc.canvas:
-            Color(*stroke.Color.Yellow + (0.5,))
+            Color(1,1,0,0.3)
             Rectangle(pos = (rect.left, rect.bottom), size = (rect.right-rect.left, rect.top - rect.bottom))
 
     def stroke_removed(self, layout, strk):
-        print "Stroke removed called", strk
+        pass
     
     def mode_changed(self, instance, value):
-        print "InkCanvas mode changed", value
+        pass
 
     def build(self):
         self.inkc = inkc = StrokeCanvasFloat()
+        inkc.stroke_color = 'darkblue'
+        inkc.stroke_width = 2.0
+        inkc.stroke_visibility = True
+        inkc.stroke_opacity = 0.8
         inkc.bind(size=self._update_rect, pos = self._update_rect)
         inkc.bind(on_stroke_added = self.stroke_collected)
         inkc.bind(on_stroke_removed = self.stroke_removed)
         inkc.bind(mode = self.mode_changed)
-        btn = Button(text='Change Mode', size_hint = (1,.15))
+        btn = Button(text='Draw Mode', size_hint = (1,.15))
         btn.bind(on_press=partial(self.callback, btn))
         inkc.add_widget(btn)
         with inkc.canvas.before:

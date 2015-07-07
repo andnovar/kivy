@@ -90,43 +90,27 @@ class RendererKivy(RendererBase):
         polygons = path.to_polygons(transform, self.widget.width,
                                     self.widget.height)
         for polygon in polygons:
-            x_list = []
-            y_list = []
+            vertices = []
             for x, y in polygon:
-                x_list.append(int(x))
-                y_list.append(int(y))
-                points_line.append(int(x))
-                points_line.append(int(y))
+                vertices += [x, y, 0, 0, ]
+                points_line.append(float(x))
+                points_line.append(float(y))
             with self.widget.canvas:
                 if rgbFace is not None:
                     Color(*rgbFace)
-                    Mesh(vertices=self._regular_polygon(1.0, len(polygon),
-                        x_list, y_list), indices=range(len(polygon)),
+                    Mesh(vertices=vertices, indices=range(len(polygon)),
                          mode=str('triangle_fan'))
-                else:
-                    Color(*gc.get_rgb())
-                    Line(points=points_line, width=1.0,
-                         dash_length=gc.line['dash_length'],
-                         dash_offset=gc.line['dash_offset'],
-                         dash_joint=gc.line['joint_style'])
+                Color(*gc.get_rgb())
+                Line(points=points_line, width=gc.line['width'],
+                     dash_length=gc.line['dash_length'],
+                     dash_offset=gc.line['dash_offset'],
+                     dash_joint=gc.line['joint_style'])
 
-    def _regular_polygon(self, radius, sides, x, y):
-        r = radius
-        a = 2 * pi / sides
-        vertices = []
-        for i in xrange(sides):
-            vertices += [
-                x[i] + cos(i * a) * r,
-                y[i] + sin(i * a) * r,
-                cos(i * a),
-                sin(i * a),
-            ]
-        return vertices
-
+    ''' Not sure yet what is this for '''
     def draw_image(self, gc, x, y, im):
         print('draw_image', gc, x, y, im)
 
-    ''' Under development '''
+    ''' Experimental '''
     def draw_gouraud_triangle(self, gc, points, colors, transform):
         assert len(points) == len(colors)
         assert points.ndim == 3
@@ -141,6 +125,13 @@ class RendererKivy(RendererBase):
         tpoints = trans.transform(points)
         tpoints = tpoints.reshape(shape)
         name = self.list_goraud_triangles.append((tpoints, colors))
+        ''' Implement this pseudocode with points and colors:
+        http://www-users.mat.uni.torun.pl/~wrona/3d_tutor/tri_fillers.html '''
+
+    def draw_gouraud_triangles(self, gc, triangles_array, colors_array,
+        transform):
+        self.draw_gouraud_triangles(gc, points.reshape((1, 3, 2)),
+                                    colors.reshape((1, 3, 4)), trans)
 
     def draw_text(self, gc, x, y, s, prop, angle, ismath=False, mtext=None):
         if ismath:
@@ -166,30 +157,6 @@ class RendererKivy(RendererBase):
             else:
                 Rectangle(pos=(x, y), texture=plot_text.texture,
                           size=plot_text.texture.size)
-
-    # draw_markers is optional, and we get more correct relative
-    # timings by leaving it out. backend implementers concerned with
-    # performance will probably want to implement it
-#     def draw_markers(self, gc, marker_path, marker_trans, path,
-#     trans, rgbFace=None):
-#         pass
-
-    # draw_path_collection is optional, and we get more correct
-    # relative timings by leaving it out. backend implementers concerned with
-    # performance will probably want to implement it
-#     def draw_path_collection(self, gc, master_transform, paths,
-#                              all_transforms, offsets, offsetTrans, facecolors,
-#                              edgecolors, linewidths, linestyles,
-#                              antialiaseds):
-#         pass
-
-    # draw_quad_mesh is optional, and we get more correct
-    # relative timings by leaving it out. backend implementers concerned with
-    # performance will probably want to implement it
-#     def draw_quad_mesh(self, gc, master_transform, meshWidth, meshHeight,
-#                        coordinates, offsets, offsetTrans, facecolors,
-#                        antialiased, edgecolors):
-#         pass
 
     def flipy(self):
         return False
@@ -270,8 +237,8 @@ class GraphicsContextKivy(GraphicsContextBase):
         if rectangle is None:
             return
         l, b, w, h = rectangle.bounds
-        self.rectangle = (int(l), self.renderer.height - int(b + h) + 1,
-                     int(w), int(h))
+        self.rectangle = (float(l), self.renderer.height - float(b + h) + 1,
+                     float(w), float(h))
 #         self._cliprect = Bbox([[100,100],[100,100]])
 
     def set_dashes(self, dash_offset, dash_list):

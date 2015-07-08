@@ -2,15 +2,16 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import six
-
+import os
 import matplotlib
 from matplotlib._pylab_helpers import Gcf
 from matplotlib.backend_bases import RendererBase, GraphicsContextBase,\
-    FigureManagerBase, FigureCanvasBase
+    FigureManagerBase, FigureCanvasBase, NavigationToolbar2, ToolContainerBase
 from matplotlib.figure import Figure
 from matplotlib.transforms import Bbox
 from matplotlib.backend_bases import ShowBase
 from matplotlib.mathtext import MathTextParser
+from matplotlib import rcParams
 
 try:
     import kivy
@@ -24,6 +25,8 @@ from kivy.uix.widget import Widget
 from kivy.uix.label import Label
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.behaviors import FocusBehavior
+from kivy.uix.actionbar import ActionBar, ActionView, \
+                                ActionButton, ActionToggleButton
 from kivy.base import EventLoop
 from kivy.core.text import Label as CoreLabel
 from kivy.graphics import Color, Line
@@ -185,6 +188,53 @@ class RendererKivy(RendererBase):
         #return points/72.0 * self.dpi.get() * pixels_per_inch/72.0
         # else
         #return points/72.0 * self.dpi.get()
+
+
+class NavigationToolbar2Kivy(NavigationToolbar2):
+
+    def __init__(self, canvas, **kwargs):
+        #super(NavigationToolbar2, self).__init__(canvas)
+        NavigationToolbar2.__init__(self, canvas)
+        self.ctx = None
+
+    def _init_toolbar(self):
+        basedir = os.path.join(rcParams['datapath'], 'images')
+        actionbar = ActionBar(pos_hint={'bottom': 1.0})
+        actionview = ActionView()
+        actionbar.add_widget(actionview)
+        for text, tooltip_text, image_file, callback in self.toolitems:
+            if text is None:
+                # insert a separator
+                continue
+            fname = os.path.join(basedir, image_file + '.png')
+            action_button = ActionButton(text=text, icon=fname)
+            actionview.add_widget(action_button)
+        self.canvas.add_widget(actionbar, canvas='after')
+
+
+class ToolbarKivy(ToolContainerBase, ActionView):
+
+    def __init__(self, toolmanager):
+        ToolContainerBase.__init__(self, toolmanager)
+        ActionView.__init__(self)
+        self._toolitems = {}
+
+    def add_toolitem(self, name, group, position, image, description, toggle):
+        basedir = os.path.join(rcParams['datapath'], 'images')
+        fname = os.path.join(basedir, image_file + '.png')
+        if toggle:
+            tbutton = ActionToggleButton()
+        else:
+            tbutton = ActionButton()
+        tbutton.text = name
+        tbutton.icon = fname
+        self.add_widget(tbutton)
+        signal = tbutton.connect('clicked', self._call_tool, name)
+        self._toolitems.setdefault(name, [])
+        self._toolitems[name].append((tbutton, signal))
+
+    def _call_tool(self, btn, name):
+        self.trigger_tool(name)
 
 
 class GraphicsContextKivy(GraphicsContextBase):
@@ -491,6 +541,8 @@ class FigureManagerKivy(FigureManagerBase):
         if _debug:
             print('FigureManagerKivy: ', canvas)
         super(FigureManagerKivy, self).__init__(canvas, num)
+        self.canvas = canvas
+        self.toolbar = self._get_toolbar()
 
     def show(self):
         global app
@@ -506,6 +558,15 @@ class FigureManagerKivy(FigureManagerBase):
     def resize(self, w, h):
         Window.size(w, h)
 
+    def _get_toolbar(self):
+        if rcParams['toolbar'] == 'toolbar2':
+            toolbar = NavigationToolbar2Kivy(self.canvas)
+        elif rcParams['toolbar'] == 'toolmanager':
+            toolbar = ToolbarKivy(self.toolmanager)
+        else:
+            toolbar = None
+        return toolbar
+
     def destroy(self):
         global app
         if app is not None:
@@ -516,5 +577,6 @@ class FigureManagerKivy(FigureManagerBase):
 #
 ########################################################################
 
+Toolbar = ToolbarKivy
 FigureCanvas = FigureCanvasKivy
 FigureManager = FigureManagerKivy

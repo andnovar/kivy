@@ -12,6 +12,7 @@ from matplotlib.transforms import Bbox
 from matplotlib.backend_bases import ShowBase
 from matplotlib.mathtext import MathTextParser
 from matplotlib import rcParams
+from hashlib import md5
 
 try:
     import kivy
@@ -34,6 +35,8 @@ from kivy.graphics import Rotate, Translate
 from kivy.graphics.context_instructions import PopMatrix, PushMatrix
 from kivy.logger import Logger
 from kivy.graphics import Mesh
+
+import numpy as np
 
 from math import cos, sin, pi
 # try:
@@ -85,8 +88,10 @@ class RendererKivy(RendererBase):
     def __init__(self, dpi, widget):
         self.dpi = dpi
         self.widget = widget
-        self.mathtext_parser = MathTextParser("Agg")
+        #  Can be enhanced by using TextToPath matplotlib, textpath.py
+        self.mathtext_parser = MathTextParser("Bitmap")
         self.list_goraud_triangles = []
+        self._clipd = {}
 
     def draw_path(self, gc, path, transform, rgbFace=None):
         points_line = []
@@ -109,12 +114,39 @@ class RendererKivy(RendererBase):
                      dash_offset=gc.line['dash_offset'],
                      dash_joint=gc.line['joint_style'])
 
-    ''' Not sure yet what is this for '''
-    def draw_image(self, gc, x, y, im):
-        print('draw_image', gc, x, y, im)
+    def tostring_rgba_minimized(self):
+        extents = self.get_content_extents()
+        bbox = [[extents[0], self.height - (extents[1] + extents[3])],
+                [extents[0] + extents[2], self.height - extents[1]]]
+        region = self.copy_from_bbox(bbox)
+        return np.array(region), extents
 
-    ''' Experimental '''
+    def draw_image(self, gc, x, y, im):
+        bbox = gc.get_clip_rectangle()
+        if bbox is not None:
+            l, b, w, h = bbox.bounds
+        else:
+            l = 0
+            b = 0,
+            w = self.widget.width
+            h = self.widget.height
+        h, w = im.get_size_out()
+        rows, cols, image_str = im.as_rgba_str()
+        print(rows)
+        print(cols)
+        image_array = np.fromstring(image_str, np.uint8)
+        print(image_array.shape)
+        print(image_array)
+        image_array.shape = rows, cols, 4
+        print(image_array.shape)
+        texture = Texture.create(size=(w, h))
+        texture.blit_buffer(image_str, colorfmt='rgba', bufferfmt='ubyte')
+        with self.widget.canvas:
+            Rectangle(texture=texture, pos=(x, y), size=(w, h))
+
     def draw_gouraud_triangle(self, gc, points, colors, transform):
+        RendererBase.draw_gouraud_triangle(self, gc, points, colors, transform)
+        print("Entering draw_gouraud_triangle")
         assert len(points) == len(colors)
         assert points.ndim == 3
         assert points.shape[1] == 3
@@ -122,7 +154,6 @@ class RendererKivy(RendererBase):
         assert colors.ndim == 3
         assert colors.shape[1] == 3
         assert colors.shape[2] == 4
-
         shape = points.shape
         points = points.reshape((shape[0] * shape[1], 2))
         tpoints = trans.transform(points)
@@ -133,33 +164,57 @@ class RendererKivy(RendererBase):
 
     def draw_gouraud_triangles(self, gc, triangles_array, colors_array,
         transform):
-        self.draw_gouraud_triangles(gc, points.reshape((1, 3, 2)),
-                                    colors.reshape((1, 3, 4)), trans)
+        print ("Entra en draw_gouraud_triangles")
+#         self.draw_gouraud_triangles(gc, points.reshape((1, 3, 2)),
+#                                     colors.reshape((1, 3, 4)), trans)
 
     def draw_text(self, gc, x, y, s, prop, angle, ismath=False, mtext=None):
-        if ismath:
-            s = self.strip_math(s)  # remove latex formatting from mathtext
-        x, y = float(x), float(y)
+        x, y = int(x), int(y)
         if x < 0 or y < 0:
             return
-        plot_text = CoreLabel(font_size=prop.get_size_in_points(),
-                              font_name=prop.get_name())
-        plot_text.text = str(s.encode("utf-8"))
-        if(prop.get_style() == 'italic'):
-            plot_text.italic = True
-        if(prop.get_weight() > 500):
-            plot_text.bold = True
-        plot_text.refresh()
+        if ismath:
+            self.draw_mathtext(gc, x, y, s, prop, angle)
+        else:
+            plot_text = CoreLabel(font_size=prop.get_size_in_points(),
+                                  font_name=prop.get_name())
+            plot_text.text = str(s.encode("utf-8"))
+            if(prop.get_style() == 'italic'):
+                plot_text.italic = True
+            if(prop.get_weight() > 500):
+                plot_text.bold = True
+            plot_text.refresh()
+            with self.widget.canvas:
+                if isinstance(angle, float):
+                    PushMatrix()
+                    Rotate(angle=angle, origin=(x, y))
+                    Rectangle(pos=(x, y), texture=plot_text.texture,
+                              size=plot_text.texture.size)
+                    PopMatrix()
+                else:
+                    Rectangle(pos=(x, y), texture=plot_text.texture,
+                              size=plot_text.texture.size)
+
+    def draw_mathtext(self, gc, x, y, s, prop, angle):
+        """
+        Draw the math text using matplotlib.mathtext
+        """
+        ftimage, depth = self.mathtext_parser.parse(s, self.dpi, prop)
+        w = ftimage.get_width()
+        h = ftimage.get_height()
+        texture = Texture.create(size=(w, h))
+        texture.blit_buffer(ftimage.as_rgba_str()[0][0], colorfmt='rgba',
+                            bufferfmt='ubyte')
+        texture.flip_vertical()
         with self.widget.canvas:
-            if isinstance(angle, float):
-                PushMatrix()
-                Rotate(angle=angle, origin=(x, y))
-                Rectangle(pos=(x, y), texture=plot_text.texture,
-                          size=plot_text.texture.size)
-                PopMatrix()
-            else:
-                Rectangle(pos=(x, y), texture=plot_text.texture,
-                          size=plot_text.texture.size)
+            Rectangle(texture=texture, pos=(x, y), size=(w, h))
+
+    def start_filter(self):
+        print("Entra en start filter")
+        RendererBase.start_filter(self)
+
+    def stop_filter(self, filter_func):
+        print("Entra en stop filter")
+        RendererBase.stop_filter(self, filter_func)
 
     def flipy(self):
         return False
@@ -169,9 +224,10 @@ class RendererKivy(RendererBase):
 
     def get_text_width_height_descent(self, s, prop, ismath):
         if ismath:
-            ox, oy, width, height, descent, font_image, used_characters = \
-                self.mathtext_parser.parse(s, self.dpi, prop)
-            return width, height, descent
+            ftimage, depth = self.mathtext_parser.parse(s, self.dpi, prop)
+            w = ftimage.get_width()
+            h = ftimage.get_height()
+            return w, h, depth
         plot_text = CoreLabel(font_size=prop.get_size_in_points(),
                               font_name=prop.get_name())
         plot_text.text = str(s.encode("utf-8"))
@@ -284,12 +340,12 @@ class GraphicsContextKivy(GraphicsContextBase):
 
     def set_clip_rectangle(self, rectangle):
         GraphicsContextBase.set_clip_rectangle(self, rectangle)
-        if rectangle is None:
-            return
-        l, b, w, h = rectangle.bounds
-        self.rectangle = (float(l), self.renderer.height - float(b + h) + 1,
-                     float(w), float(h))
-#         self._cliprect = Bbox([[100,100],[100,100]])
+#         if rectangle is None:
+#             return
+#         l, b, w, h = rectangle.bounds
+#         self._cliprect = Bbox.from_bounds(float(l), self.renderer.height
+#                            - float(b + h) + 1, float(w), float(h))
+#         self._cliprect = Bbox([[0,0],[100,100]])
 
     def set_dashes(self, dash_offset, dash_list):
         GraphicsContextBase.set_dashes(self, dash_offset, dash_list)
@@ -542,7 +598,7 @@ class FigureManagerKivy(FigureManagerBase):
             print('FigureManagerKivy: ', canvas)
         super(FigureManagerKivy, self).__init__(canvas, num)
         self.canvas = canvas
-        self.toolbar = self._get_toolbar()
+#         self.toolbar = self._get_toolbar()
 
     def show(self):
         global app

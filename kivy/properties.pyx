@@ -86,16 +86,15 @@ Error Handling
 ~~~~~~~~~~~~~~
 
 If setting a value would otherwise raise a ValueError, you have two options to
-handle the error gracefully within the property. An errorvalue is a substitute
-for the invalid value. An errorhandler is a callable (single argument function
-or lambda) which can return a valid substitute.
-
-errorvalue parameter::
+handle the error gracefully within the property. The first option is to use an
+errorvalue parameter. An errorvalue is a substitute for the invalid value::
 
     # simply returns 0 if the value exceeds the bounds
     bnp = BoundedNumericProperty(0, min=-500, max=500, errorvalue=0)
 
-errorhandler parameter::
+The second option in to use an errorhandler parameter. An errorhandler is a
+callable (single argument function or lambda) which can return a valid
+substitute::
 
     # returns the boundary value when exceeded
     bnp = BoundedNumericProperty(0, min=-500, max=500,
@@ -109,8 +108,8 @@ Kivy properties are easier to use than the standard ones. See the next chapter
 for examples of how to use them :)
 
 
-Observe Properties changes
---------------------------
+Observe Property changes
+------------------------
 
 As we said in the beginning, Kivy's Properties implement the `Observer pattern
 <http://en.wikipedia.org/wiki/Observer_pattern>`_. That means you can
@@ -151,7 +150,7 @@ class::
 Observe using 'on_<propname>'
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you created the class yourself, you can use the 'on_<propname>' callback::
+If you defined the class yourself, you can use the 'on_<propname>' callback::
 
     class MyClass(EventDispatcher):
         a = NumericProperty(1)
@@ -171,7 +170,9 @@ Binding to properties of properties.
 When binding to a property of a property, for example binding to a numeric
 property of an object saved in a object property, updating the object property
 to point to a new object will not re-bind the numeric property to the
-new object. For example::
+new object. For example:
+
+.. code-block:: kv
 
     <MyWidget>:
         Label:
@@ -1310,7 +1311,7 @@ cdef class AliasProperty(Property):
             return self.x + self.width
         def set_right(self, value):
             self.x = value - self.width
-        right = AliasProperty(get_right, set_right, bind=('x', 'width'))
+        right = AliasProperty(get_right, set_right, bind=['x', 'width'])
 
     :Parameters:
         `getter`: function
@@ -1552,7 +1553,9 @@ cdef class ConfigParserProperty(Property):
     the `info` section of the ConfigParser named `example`. Initially, this
     ConfigParser doesn't exist. Then, in `__init__`, a ConfigParser is created
     with name `example`, which is then automatically linked with this property.
-    then in kv::
+    then in kv:
+
+    .. code-block:: kv
 
         BoxLayout:
             TextInput:

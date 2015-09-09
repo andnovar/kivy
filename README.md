@@ -26,8 +26,8 @@ Installation, Documentation and Examples
 ----------------------------------------
 
 Extensive installation instructions as well as tutorials and general
-documentation, including an API reference, can be found at: http://kivy.org/docs/.
-An offline [PDF version](http://kivy.org/docs/pdf/Kivy-latest.pdf) is also available.
+documentation, including an API reference, can be found at http://kivy.org/docs.
+A [PDF version](http://kivy.org/docs/pdf/Kivy-latest.pdf) is also available.
 
 Kivy ships with many examples which can be found in the `examples` folder.
 
@@ -91,7 +91,7 @@ Licenses
 
 - Kivy is released under the terms of the MIT License. Please refer to the
   LICENSE file.
-- The provided fonts DroidSans and DroidSansMono are licensed and
+- The provided fonts Roboto and Roboto Mono are licensed and
   distributed under the terms of the
   [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0).
   The DejaVuSans (used for the virtual keyboard) license can be viewed

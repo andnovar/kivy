@@ -8,30 +8,29 @@ Text Input
 .. image:: images/textinput-mono.jpg
 .. image:: images/textinput-multi.jpg
 
-The :class:`TextInput` widget provides a box of editable plain text.
+The :class:`TextInput` widget provides a box for editable plain text.
 
 Unicode, multiline, cursor navigation, selection and clipboard features
 are supported.
 
-.. note::
+The :class:`TextInput` uses two different coordinate systems:
 
-    Two different coordinate systems are used with TextInput:
-
-        - (x, y) - coordinates in pixels, mostly used for rendering on screen.
-        - (row, col) - cursor index in characters / lines, used for selection
-          and cursor movement.
+* (x, y) - coordinates in pixels, mostly used for rendering on screen.
+* (row, col) - cursor index in characters / lines, used for selection
+  and cursor movement.
 
 
 Usage example
 -------------
 
-To create a multiline textinput ('enter' key adds a new line)::
+To create a multiline :class:`TextInput` (the 'enter' key adds a new line)::
 
     from kivy.uix.textinput import TextInput
     textinput = TextInput(text='Hello world')
 
-To create a singleline textinput, set the multiline property to False ('enter'
-key will defocus the textinput and emit on_text_validate event)::
+To create a singleline :class:`TextInput`, set the :class:`TextInput.multiline`
+property to False (the 'enter' key will defocus the TextInput and emit an
+'on_text_validate' event)::
 
     def on_enter(instance, value):
         print('User pressed enter in', instance)
@@ -39,7 +38,7 @@ key will defocus the textinput and emit on_text_validate event)::
     textinput = TextInput(text='Hello world', multiline=False)
     textinput.bind(on_text_validate=on_enter)
 
-The textinput's text is stored on its :attr:`TextInput.text` property. To run a
+The textinput's text is stored in its :attr:`TextInput.text` property. To run a
 callback when the text changes::
 
     def on_text(instance, value):
@@ -48,8 +47,9 @@ callback when the text changes::
     textinput = TextInput()
     textinput.bind(text=on_text)
 
-You can 'focus' a textinput, meaning that the input box will be highlighted
-and keyboard focus will be requested::
+You can set the :class:`focus <kivy.uix.behaviors.FocusBehavior>` to a
+Textinput, meaning that the input box will be highlighted and keyboard focus
+will be requested::
 
     textinput = TextInput(focus=True)
 
@@ -66,8 +66,8 @@ get notified of focus changes::
     textinput = TextInput()
     textinput.bind(focus=on_focus)
 
-See :class:`~kivy.uix.behaviors.FocusBehavior` from which :class:`TextInput`
-inherits for more details.
+See :class:`~kivy.uix.behaviors.FocusBehavior`, from which the
+:class:`TextInput` inherits, for more details.
 
 
 Selection
@@ -133,6 +133,10 @@ Control + a     Select all the content
 Control + z     undo
 Control + r     redo
 =============== ========================================================
+
+.. note::
+    To enable Emacs-style keyboard shortcuts, you can use
+    :class:`~kivy.uix.behaviors.emacs.EmacsBehavior`.
 
 '''
 
@@ -678,14 +682,9 @@ class TextInput(FocusBehavior, Widget):
         cc, cr = self.cursor
         sci = self.cursor_index
         ci = sci()
-        new_text = text = substring
+        text = self._lines[cr]
         len_str = len(substring)
-
-        if self._lines:
-            text = self._lines[cr]
-            new_text = text[:cc] + substring + text[cc:]
-        else:
-            ci = len_str
+        new_text = text[:cc] + substring + text[cc:]
         self._set_line_text(cr, new_text)
 
         wrap = (self._get_text_width(
@@ -825,8 +824,6 @@ class TextInput(FocusBehavior, Widget):
             - do nothing, if we are at the start.
 
         '''
-        if not self._lines:
-            return
         if self.readonly:
             return
         cc, cr = self.cursor
@@ -1154,8 +1151,6 @@ class TextInput(FocusBehavior, Widget):
         _get_text_width = self._get_text_width
         _tab_width = self.tab_width
         _label_cached = self._label_cached
-        if not l:
-            return 0, cy
         for i in range(1, len(l[cy]) + 1):
             if _get_text_width(l[cy][:i],
                                _tab_width,
@@ -1180,8 +1175,6 @@ class TextInput(FocusBehavior, Widget):
     def delete_selection(self, from_undo=False):
         '''Delete the current text selection (if any).
         '''
-        if not self._lines:
-            return
         if self.readonly:
             return
         self._hide_handles(EventLoop.window)
@@ -1263,8 +1256,6 @@ class TextInput(FocusBehavior, Widget):
         different behavior. Alternatively, you can bind to this
         event to provide additional functionality.
         '''
-        if not self._lines:
-            return
         ci = self.cursor_index()
         cc = self.cursor_col
         line = self._lines[self.cursor_row]
@@ -1281,8 +1272,6 @@ class TextInput(FocusBehavior, Widget):
         different behavior. Alternatively, you can bind to this
         event to provide additional functionality.
         '''
-        if not self._lines:
-            return
         ci = self.cursor_index()
         sindex, eindex = self._expand_range(ci)
         Clock.schedule_once(lambda dt: self.select_text(sindex, eindex))
@@ -1293,8 +1282,6 @@ class TextInput(FocusBehavior, Widget):
         Override this to provide different behavior. Alternatively,
         you can bind to this event to provide additional functionality.
         '''
-        if not self._lines:
-            return
         Clock.schedule_once(lambda dt: self.select_all())
 
     def on_touch_down(self, touch):
@@ -1748,12 +1735,8 @@ class TextInput(FocusBehavior, Widget):
 
     def _set_line_text(self, line_num, text):
         # Set current line with other text than the default one.
-        try:
-            self._lines_labels[line_num] = self._create_line_label(text)
-            self._lines[line_num] = text
-        except IndexError:
-            self._lines_labels = [self._create_line_label(text)]
-            self._lines = [text]
+        self._lines_labels[line_num] = self._create_line_label(text)
+        self._lines[line_num] = text
 
     def _trigger_refresh_line_options(self, *largs):
         Clock.unschedule(self._refresh_line_options)
@@ -1786,25 +1769,6 @@ class TextInput(FocusBehavior, Widget):
     def _refresh_text(self, text, *largs):
         # Refresh all the lines from a new text.
         # By using cache in internal functions, this method should be fast.
-        if not self._lines:
-            min_line_ht = self._label_cached.get_extents('_')[1]
-            # with markup texture can be of height `1`
-            self.line_height = min_line_ht
-            #self.line_spacing = 2
-            # now, if the text change, maybe the cursor is not at
-            # the same place as before. so, try to set the cursor on the
-            # good place
-            row = self.cursor_row
-            cursor = None
-            self.cursor = self.get_cursor_from_index(
-                self.cursor_index() if cursor is None else cursor)
-            # if we back to a new line, reset the scroll, otherwise,
-            # the effect is ugly.
-            if self.cursor_row != row:
-                self.scroll_x = 0
-            # with the new text don't forget to update graphics again
-            self._trigger_update_graphics()
-            return
         mode = 'all'
         if len(largs) > 1:
             mode, start, finish, _lines, _lines_flags, len_lines = largs
@@ -2288,7 +2252,7 @@ class TextInput(FocusBehavior, Widget):
             self._alt_r = False
 
     def keyboard_on_key_down(self, window, keycode, text, modifiers):
-        # Keycodes on OSX:
+        # Keycodes on OS X:
         ctrl, cmd = 64, 1024
         key, key_str = keycode
         win = EventLoop.window
@@ -2901,7 +2865,7 @@ class TextInput(FocusBehavior, Widget):
 
         widget = TextInput(text=u'My unicode string')
 
-    :attr:`text` a :class:`~kivy.properties.StringProperty`.
+    :attr:`text` is an :class:`~kivy.properties.AliasProperty`.
     '''
 
     font_name = StringProperty('Roboto')
@@ -2994,6 +2958,14 @@ class TextInput(FocusBehavior, Widget):
 
     :attr:`minimum_height` is a readonly
     :class:`~kivy.properties.AliasProperty`.
+
+    .. warning::
+        :attr:`minimum_width` is calculated based on :attr:`width` therefore
+        code like this will lead to an infinite loop::
+
+            <FancyTextInput>:
+                height: self.minimum_height
+                width: self.height
     '''
 
     line_spacing = NumericProperty(0)

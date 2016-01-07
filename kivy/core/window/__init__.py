@@ -244,6 +244,16 @@ class WindowBase(EventDispatcher):
 
             .. versionadded:: 1.9.0
 
+        `on_cursor_enter`:
+            Fired when when the cursor enters the window.
+
+            .. versionadded:: 1.9.1
+
+        `on_cursor_leave`:
+            Fired when when the cursor leaves the window.
+
+            .. versionadded:: 1.9.1
+
         `on_keyboard`: key, scancode, codepoint, modifier
             Fired when the keyboard is used for input.
 
@@ -285,6 +295,7 @@ class WindowBase(EventDispatcher):
     _modifiers = ListProperty([])
     _rotation = NumericProperty(0)
     _clearcolor = ObjectProperty([0, 0, 0, 1])
+    _focus = BooleanProperty(True)
 
     children = ListProperty([])
     '''List of the children of this window.
@@ -343,7 +354,7 @@ class WindowBase(EventDispatcher):
 
     .. versionadded:: 1.9.1
 
-    :attr:`minimum_width` is a :class:`~kivy.properties.NumericProperty`,
+    :attr:`minimum_width` is a :class:`~kivy.properties.NumericProperty` and
     defaults to 0.
     '''
 
@@ -352,7 +363,7 @@ class WindowBase(EventDispatcher):
 
     .. versionadded:: 1.9.1
 
-    :attr:`minimum_height` is a :class:`~kivy.properties.NumericProperty`,
+    :attr:`minimum_height` is a :class:`~kivy.properties.NumericProperty` and
     defaults to 0.
     '''
 
@@ -456,27 +467,35 @@ class WindowBase(EventDispatcher):
 
     softinput_mode = OptionProperty('', options=(
         '', 'below_target', 'pan', 'scale', 'resize'))
-    '''This specifies the behavior of window contents on display of soft
-    keyboard on mobile platform. Can be one of '', 'pan', 'scale', 'resize'.
+    '''This specifies the behavior of window contents on display of the soft
+    keyboard on mobile platforms. It can be one of '', 'pan', 'scale',
+    'resize' or 'below_target'. Their effects are listed below.
 
-    When '' The main window is left as it is allowing the user to use
-    :attr:`keyboard_height` to manage the window contents the way they want.
+    +----------------+-------------------------------------------------------+
+    | Value          | Effect                                                |
+    +================+=======================================================+
+    | ''             | The main window is left as is, allowing you to use    |
+    |                | the :attr:`keyboard_height` to manage the window      |
+    |                | contents manually.                                    |
+    +----------------+-------------------------------------------------------+
+    | 'pan'          | The main window pans, moving the bottom part of the   |
+    |                | window to be always on top of the keyboard.           |
+    +----------------+-------------------------------------------------------+
+    | 'resize'       | The window is resized and the contents scaled to fit  |
+    |                | the remaining space.                                  |
+    +----------------+-------------------------------------------------------+
+    | 'below_target' | The window pans so that the current target TextInput  |
+    |                | widget requesting the keyboard is presented just above|
+    |                | the soft keyboard.                                    |
+    +----------------+-------------------------------------------------------+
 
-    when 'pan' The main window pans moving the bottom part of the window to be
-    always on top of the keyboard.
-
-    when 'resize' The window is resized and the contents scaled to fit the
-    remaining space.
-
-    When 'below_target', the window pans so that the current target TextInput
-    widget requesting the keyboard is presented just above the soft Keyboard.
-
-    .. versionchanged::1.9.1
+    :attr:`softinput_mode` is an :class:`~kivy.properties.OptionProperty` and
+    defaults to `None`.
 
     .. versionadded:: 1.9.0
 
-    :attr:`softinput_mode` is a :class:`OptionProperty` defaults to None.
-
+    .. versionchanged:: 1.9.1
+        The 'below_target' option was added.
     '''
 
     _keyboard_changed = BooleanProperty(False)
@@ -489,6 +508,8 @@ class WindowBase(EventDispatcher):
         return 0
 
     def _get_android_kheight(self):
+        if USE_SDL2:  # Placeholder until the SDL2 bootstrap supports this
+            return 0
         global android
         if not android:
             import android
@@ -509,8 +530,8 @@ class WindowBase(EventDispatcher):
 
     .. versionadded:: 1.9.0
 
-    :attr:`keyboard_height` is a read-only :class:`AliasProperty`,
-    defaults to 0.
+    :attr:`keyboard_height` is a read-only
+    :class:`~kivy.propertries.AliasProperty` and defaults to 0.
     '''
 
     def _set_system_size(self, size):
@@ -545,13 +566,17 @@ class WindowBase(EventDispatcher):
 
     .. versionadded:: 1.9.0
 
-    :attr:`borderless` is a :class:`BooleanProperty`, defaults to False.
+    :attr:`borderless` is a :class:`~kivy.properties.BooleanProperty` and
+    defaults to False.
     '''
 
     fullscreen = OptionProperty(False, options=(True, False, 'auto', 'fake'))
     '''This property sets the fullscreen mode of the window. Available options
-    are: True, False, 'auto', 'fake'. Check the :mod:`~kivy.config`
-    documentation for a more detailed explanation on the values.
+    are: True, False, 'auto' and 'fake'. Check the :mod:`~kivy.config`
+    documentation for more detailed explanations on these values.
+
+    fullscreen is an :class:`~kivy.properties.OptionProperty` and defaults to
+    `False`.
 
     .. versionadded:: 1.2.0
 
@@ -565,6 +590,30 @@ class WindowBase(EventDispatcher):
 
     .. versionadded:: 1.2.0
     '''
+
+    show_cursor = BooleanProperty(True)
+    '''Set whether or not the cursor is shown on the window.
+
+    .. versionadded:: 1.9.1
+
+    :attr:`show_cursor` is a :class:`~kivy.properties.BooleanProperty` and
+    defaults to True.
+    '''
+
+    def _get_focus(self):
+        return self._focus
+
+    focus = AliasProperty(_get_focus, None, bind=('_focus',))
+    '''Check whether or not the window currently has focus.
+
+    .. versionadded:: 1.9.1
+
+    :attr:`focus` is a read-only :class:`~kivy.properties.AliasProperty and
+    defaults to True.
+    '''
+
+    def _set_cursor_state(self, value):
+        pass
 
     @property
     def __self__(self):
@@ -582,7 +631,8 @@ class WindowBase(EventDispatcher):
         'on_motion', 'on_touch_down', 'on_touch_move', 'on_touch_up',
         'on_mouse_down', 'on_mouse_move', 'on_mouse_up', 'on_keyboard',
         'on_key_down', 'on_key_up', 'on_textinput', 'on_dropfile',
-        'on_request_close', 'on_joy_axis', 'on_joy_hat', 'on_joy_ball',
+        'on_request_close', 'on_cursor_enter', 'on_cursor_leave',
+        'on_joy_axis', 'on_joy_hat', 'on_joy_ball',
         'on_joy_button_down', 'on_joy_button_up', 'on_memorywarning')
 
     def __new__(cls, **kwargs):
@@ -617,7 +667,7 @@ class WindowBase(EventDispatcher):
         if 'fullscreen' not in kwargs:
             fullscreen = Config.get('graphics', 'fullscreen')
             if fullscreen not in ('auto', 'fake'):
-                fullscreen = fullscreen.lower() in ('true', '1', 'yes', 'yup')
+                fullscreen = fullscreen.lower() in ('true', '1', 'yes')
             kwargs['fullscreen'] = fullscreen
         if 'width' not in kwargs:
             kwargs['width'] = Config.getint('graphics', 'width')
@@ -645,6 +695,9 @@ class WindowBase(EventDispatcher):
         else:
             kwargs['left'] = Config.getint('graphics', 'left')
         kwargs['_size'] = (kwargs.pop('width'), kwargs.pop('height'))
+        if 'show_cursor' not in kwargs:
+            kwargs['show_cursor'] = Config.getboolean('graphics',
+                                                      'show_cursor')
 
         super(WindowBase, self).__init__(**kwargs)
 
@@ -655,6 +708,8 @@ class WindowBase(EventDispatcher):
 
         self.bind(softinput_mode=lambda *dt: self.update_viewport(),
                   keyboard_height=lambda *dt: self.update_viewport())
+
+        self.bind(show_cursor=lambda *dt: self._set_cursor_state(dt[1]))
 
         # init privates
         self._system_keyboard = Keyboard(window=self)
@@ -1034,7 +1089,7 @@ class WindowBase(EventDispatcher):
 
         smode = self.softinput_mode
         target = self._system_keyboard.target
-        targettop = target.to_window(0, target.y)[1] if target else 0
+        targettop = max(0, target.to_window(0, target.y)[1]) if target else 0
         kheight = self.keyboard_height
 
         w2, h2 = w / 2., h / 2.
@@ -1045,7 +1100,7 @@ class WindowBase(EventDispatcher):
         if smode == 'pan':
             y = kheight
         elif smode == 'below_target':
-            y = 0 if kheight < targettop else (kheight - targettop) + dp(9)
+            y = 0 if kheight < targettop else (kheight - targettop)
         if smode == 'scale':
             _h -= kheight
 
@@ -1133,6 +1188,26 @@ class WindowBase(EventDispatcher):
             When the bound function returns True the window will not be closed,
             so use with care because the user would not be able to close the
             program, even if the red X is clicked.
+        '''
+        pass
+
+    def on_cursor_enter(self, *largs):
+        '''Event called when the cursor enters the window.
+
+        .. versionadded:: 1.9.1
+
+        .. note::
+            This feature requires a SDL2 window provider.
+        '''
+        pass
+
+    def on_cursor_leave(self, *largs):
+        '''Event called when the cursor leaves the window.
+
+        .. versionadded:: 1.9.1
+
+        .. note::
+            This feature requires a SDL2 window provider.
         '''
         pass
 
@@ -1245,7 +1320,7 @@ class WindowBase(EventDispatcher):
         .. warning::
 
             This event currently works with sdl2 window provider, on pygame
-            window provider and MacOSX with a patched version of pygame.
+            window provider and OS X with a patched version of pygame.
             This event is left in place for further evolution
             (ios, android etc.)
 
@@ -1341,7 +1416,7 @@ class WindowBase(EventDispatcher):
     def set_vkeyboard_class(self, cls):
         '''.. versionadded:: 1.0.8
 
-        Set the VKeyboard class to use. If set to None, it will use the
+        Set the VKeyboard class to use. If set to `None`, it will use the
         :class:`kivy.uix.vkeyboard.VKeyboard`.
         '''
         self._vkeyboard_cls = cls

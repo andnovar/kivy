@@ -19,7 +19,6 @@ from kivy.config import Config
 from kivy.logger import Logger
 from kivy.base import EventLoop, stopTouchApp
 from kivy.modules import Modules
-from kivy.metrics import dp
 from kivy.event import EventDispatcher
 from kivy.properties import ListProperty, ObjectProperty, AliasProperty, \
     NumericProperty, OptionProperty, StringProperty, BooleanProperty
@@ -767,7 +766,7 @@ class WindowBase(EventDispatcher):
         .. versionadded:: 1.9.0
 
         .. note::
-            This feature requires a SDL2 window provider and is currently only
+            This feature requires the SDL2 window provider and is currently only
             supported on desktop platforms.
 
         .. warning::
@@ -784,7 +783,7 @@ class WindowBase(EventDispatcher):
         .. versionadded:: 1.9.0
 
         .. note::
-            This feature requires a SDL2 window provider and is currently only
+            This feature requires the SDL2 window provider and is currently only
             supported on desktop platforms.
 
         .. warning::
@@ -801,7 +800,7 @@ class WindowBase(EventDispatcher):
         .. versionadded:: 1.9.0
 
         .. note::
-            This feature requires a SDL2 window provider and is currently only
+            This feature requires the SDL2 window provider and is currently only
             supported on desktop platforms.
 
         .. warning::
@@ -818,7 +817,7 @@ class WindowBase(EventDispatcher):
         .. versionadded:: 1.9.0
 
         .. note::
-            This feature requires a SDL2 window provider and is currently only
+            This feature requires the SDL2 window provider and is currently only
             supported on desktop platforms.
 
         .. warning::
@@ -835,7 +834,7 @@ class WindowBase(EventDispatcher):
         .. versionadded:: 1.9.0
 
         .. note::
-            This feature requires a SDL2 window provider and is currently only
+            This feature requires the SDL2 window provider and is currently only
             supported on desktop platforms.
 
         .. warning::
@@ -852,7 +851,7 @@ class WindowBase(EventDispatcher):
         .. versionadded:: 1.9.1
 
         .. note::
-            This feature requires a SDL2 window provider and is currently only
+            This feature requires the SDL2 window provider and is currently only
             supported on desktop platforms.
 
         .. warning::
@@ -1197,7 +1196,7 @@ class WindowBase(EventDispatcher):
         .. versionadded:: 1.9.1
 
         .. note::
-            This feature requires a SDL2 window provider.
+            This feature requires the SDL2 window provider.
         '''
         pass
 
@@ -1207,7 +1206,7 @@ class WindowBase(EventDispatcher):
         .. versionadded:: 1.9.1
 
         .. note::
-            This feature requires a SDL2 window provider.
+            This feature requires the SDL2 window provider.
         '''
         pass
 

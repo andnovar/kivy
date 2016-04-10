@@ -36,7 +36,7 @@ is available by typing ``python --version``. Then, do the following to install.
      python -m pip install --upgrade pip wheel setuptools
 
 #. Install the dependencies (skip gstreamer (~90MB) if not needed, see
-:ref:`Kivy's dependencies`)::
+   :ref:`Kivy's dependencies`)::
 
      python -m pip install docutils pygments pypiwin32 kivy.deps.sdl2 kivy.deps.glew \
      kivy.deps.gstreamer --extra-index-url https://kivy.org/downloads/packages/simple/
@@ -44,8 +44,15 @@ is available by typing ``python --version``. Then, do the following to install.
 #. Install kivy::
 
      python -m pip install kivy
-
+     
 That's it. You should now be able to ``import kivy`` in python.
+
+.. note::
+
+    If you encounter any **permission denied** errors, try opening the
+    `Command prompt as administrator
+    <https://technet.microsoft.com/en-us/library/cc947813%28v=ws.10%29.aspx>`_
+    and trying again.
 
 .. _install-nightly-win-dist:
 

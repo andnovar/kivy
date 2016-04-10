@@ -3,7 +3,7 @@
 <Label>:
     canvas:
         Color:
-            rgba: (self.disabled_color if not self.markup else (1, 1, 1, 1)) if self.disabled else (self.color if not self.markup else (1, 1, 1, 1))
+            rgba: 1, 1, 1, 1
         Rectangle:
             texture: self.texture
             size: self.texture_size
@@ -21,7 +21,7 @@
             size: self.size
             source: self.disabled_image if self.disabled else self.state_image
         Color:
-            rgba: self.disabled_color if self.disabled else self.color
+            rgba: 1, 1, 1, 1
         Rectangle:
             texture: self.texture
             size: self.texture_size
@@ -176,7 +176,7 @@
             pos: [int(x) for x in self.cursor_pos]
             size: 1, -self.line_height
         Color:
-            rgba: self.disabled_foreground_color if self.disabled else (self.hint_text_color if not self.text and not self.focus else self.foreground_color)
+            rgba: self.disabled_foreground_color if self.disabled else (self.hint_text_color if not self.text else self.foreground_color)
 
 <TextInputCutCopyPaste>:
     but_cut: cut.__self__
@@ -1149,6 +1149,10 @@
         on_value:
             root.mroot._trigger_update_clr(root.mode, root.clr_idx, args[1])
 
+<ColorWheel>:
+    _origin: self.center
+    _radius: 0.45 * min(self.size)
+
 <ColorPicker>:
     foreground_color: (1, 1, 1, 1) if self.hsv[2] * wheel.a < .5 else (0, 0, 0, 1)
     wheel: wheel
@@ -1260,7 +1264,5 @@
 
         ColorWheel:
             id: wheel
-            _origin: (self.center_x, self.center_y)
-            _radius: 0.45 * min(self.size)
             color: root.color
             on_color: root.color[:3] = args[1][:3]
